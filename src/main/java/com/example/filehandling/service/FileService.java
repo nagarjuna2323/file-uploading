@@ -25,6 +25,8 @@ class FileServiceImpl implements FileService {
     @Autowired
     private FileRepository fileRepository;
 
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
     @Override
     public Model storeFile(MultipartFile file, String description) throws IOException {
         String fileName = file.getOriginalFilename();
@@ -32,6 +34,10 @@ class FileServiceImpl implements FileService {
         byte[] data = file.getBytes();
         String extension = fileName != null && fileName.contains(".") ? fileName.substring(fileName.lastIndexOf('.') + 1) : "unknown";
         Long size = file.getSize();
+
+        if (size > MAX_FILE_SIZE) {
+            throw new IOException("File is more than 5 MB");
+        }
 
         Model fileModel = new Model(fileName, fileType, data, LocalDateTime.now(), description, extension, size);
         return fileRepository.save(fileModel);
