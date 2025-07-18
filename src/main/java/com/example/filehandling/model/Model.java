@@ -17,6 +17,7 @@ public class Model {
     private String description;
     private String extension;
     private Long size;
+    private String filePath;
 
 
     @Lob // Large Object to handle file data
@@ -24,7 +25,7 @@ public class Model {
 
     public Model() {}
     
-    public Model(String fileName, String fileType, byte[] data, LocalDateTime uploadedAt, String description, String extension, Long size) {
+    public Model(String fileName, String fileType, byte[] data, LocalDateTime uploadedAt, String description, String extension, Long size, String filePath) {
         this.fileName = fileName;
         this.fileType = fileType;
         this.data = data;
@@ -32,6 +33,7 @@ public class Model {
         this.description = description;
         this.extension = extension;
         this.size = size;
+        this.filePath = filePath;
     }
 
     // Getters and Setters
@@ -91,5 +93,13 @@ public class Model {
     
     public void setSize(Long size){
         this.size = size;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
     }
 }

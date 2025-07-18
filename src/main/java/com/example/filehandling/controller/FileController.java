@@ -2,51 +2,66 @@ package com.example.filehandling.controller;
 
 import com.example.filehandling.model.Model;
 import com.example.filehandling.service.FileService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/files")
+@RequestMapping("/files")
 public class FileController {
 
-    @Autowired
-    private FileService fileService;
+    private final FileService fileService;
+
+    // Constructor injection
+    public FileController(FileService fileService) {
+        this.fileService = fileService;
+    }
 
     @PostMapping("/upload")
-    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file,
-                                             @RequestParam("description") String description) {
+    public ResponseEntity<String> uploadFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("description") String description) {
         try {
-            Model savedFile = fileService.storeFile(file, description);
-            return ResponseEntity.ok("File uploaded successfully with ID: " + savedFile.getId());
+            Model saved = fileService.storeFile(file, description);
+            return ResponseEntity.ok("File uploaded with ID: " + saved.getId());
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("File upload failed");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("File upload failed: " + e.getMessage());
         }
     }
-
-
 
     @GetMapping("/{id}")
-    public ResponseEntity<byte[]> getFile(@PathVariable Long id) {
-        Optional<Model> fileOptional = fileService.getFile(id);
-        if (fileOptional.isPresent()) {
-            Model file = fileOptional.get();
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFileName() + "\"")
-                    .contentType(MediaType.parseMediaType(file.getFileType()))
-                    .body(file.getData());
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<Model> getFileMetadata(@PathVariable Long id) {
+        return fileService.getFile(id)
+                .map(file -> ResponseEntity.ok().body(file))
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping
+    @GetMapping("/all")
     public ResponseEntity<List<Model>> getAllFiles() {
         return ResponseEntity.ok(fileService.getAllFiles());
     }
+
+    @GetMapping("/download/{id}")
+    public ResponseEntity<byte[]> downloadFile(@PathVariable Long id) {
+        try {
+            byte[] data = fileService.downloadFile(id);
+            Model model = fileService.getFile(id).orElseThrow();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment", model.getFileName());
+
+            return new ResponseEntity<>(data, headers, HttpStatus.OK);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+
+   
 }
